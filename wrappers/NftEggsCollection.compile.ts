@@ -2,5 +2,5 @@ import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
     lang: 'tact',
-    target: 'contracts/first_contract.tact',
+    target: 'contracts/nft_eggs_collection.tact',
 };

@@ -1,11 +1,11 @@
 import { toNano } from '@ton/core';
-import { FirstContract } from '../wrappers/FirstContract';
+import { NftEggsCollection } from '../wrappers/NftEggsCollection';
 import { NetworkProvider } from '@ton/blueprint';
 
 export async function run(provider: NetworkProvider) {
-    const firstContract = provider.open(await FirstContract.fromInit());
+    const nftEggsCollection = provider.open(await NftEggsCollection.fromInit());
 
-    await firstContract.send(
+    await nftEggsCollection.send(
         provider.sender(),
         {
             value: toNano('0.05'),
@@ -16,7 +16,7 @@ export async function run(provider: NetworkProvider) {
         }
     );
 
-    await provider.waitForDeploy(firstContract.address);
+    await provider.waitForDeploy(nftEggsCollection.address);
 
-    // run methods on `firstContract`
+    // run methods on `nftEggsCollection`
 }
