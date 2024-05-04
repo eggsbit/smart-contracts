@@ -108,4 +108,44 @@ describe('NftEggsCollection', () => {
         // Did the new player receive the NFT
         expect(nftItemDataAfterTransfer.owner_address).toEqualAddress(player2.address);
     });
+
+    it.skip('should nft limit be reached', async () => {
+        const max_nft_number = 100000n;
+        const beforeDeployerBalance = await deployer.getBalance();
+        const nftCollecion: SandboxContract<NftEggsCollection> = blockchain.openContract(NftEggsCollection.fromAddress(nftEggsCollection.address));
+        let nftCollecionData = await nftCollecion.getCollectionData();
+
+        // At the beginning the counter is 0. 
+        expect(nftCollecionData.next_item_index).toStrictEqual(0n);
+
+        for (let i = 0n; i <= max_nft_number; i++) {
+            console.log('step number:' + i + '/' + max_nft_number);
+            const player: SandboxContract<TreasuryContract> = await blockchain.treasury('player' + i);
+            await nftEggsCollection.send(player.getSender(), { value: toNano("1") }, 'Mint');
+
+            const nftItemAddress = await nftEggsCollection.getNftAddressByIndex(i);
+            const nftItem: SandboxContract<NftEggsItem> = blockchain.openContract(NftEggsItem.fromAddress(nftItemAddress));
+
+            const nftItemData = await nftItem.getItemData();
+
+            // Did the player (sender) receive the NFT
+            expect(nftItemData.owner_address).toEqualAddress(player.address);
+        }
+
+        const lastPlayer: SandboxContract<TreasuryContract> = await blockchain.treasury('lastPlayer');
+        const result = await nftEggsCollection.send(lastPlayer.getSender(), { value: toNano("1") }, 'Mint');
+
+        // The last user can't get nft because collection limit is exceeded.
+        expect(result.transactions).toHaveTransaction({
+            from: lastPlayer.address,
+            to: nftEggsCollection.address,
+            success: false,
+        });
+
+        nftCollecionData = await nftCollecion.getCollectionData();
+        expect(nftCollecionData.next_item_index).toStrictEqual(max_nft_number + 1n);
+
+        const afterDeployerBalance = await deployer.getBalance();
+        expect(afterDeployerBalance).toBeGreaterThan(beforeDeployerBalance);
+    });
 });
