@@ -3,6 +3,7 @@ import "@stdlib/ownable";
 import "./nft_eggs_item.tact";
 import "./common/nft_eggs_messages.tact";
 import "./common/nft_eggs_structures.tact";
+import "./common/eggs_hatchery_messages.tact";
 
 contract NftEggsCollection with Deployable, Ownable {
 
@@ -11,7 +12,7 @@ contract NftEggsCollection with Deployable, Ownable {
     // Maximum number of NFTs. After that, the player can only buy NFTs on the market from other players.
     const max_nft_number: Int = 100000;
     // TON coins that we will keep on contract to pay storage fees
-    const min_ton_for_storage: Int = ton("0.04");
+    const min_ton_for_storage: Int = ton("0.03");
     // The amount of TON we will pay for the running code in TWM
     const gas_consumtion: Int = ton("0.03");
     // The amount of TON we will pay for the transaction
@@ -22,9 +23,13 @@ contract NftEggsCollection with Deployable, Ownable {
     // Owner of NFTCollection. He has the right to make changes. Master wallet.
     owner: Address;
     // Address of the wallet, which will be replenished with profits
-    bank: Address;
+    bank_address: Address;
+    // Contract is used for validation messages from hatcheries
+    hatchery_builder_address: Address;
     // Index of next NFT item
-    next_item_index: Int as uint32 = 0;
+    next_item_index: Int as uint64 = 0;
+    // Counter for first eggs generation
+    first_generation_counter: Int as uint32 = 0;
     // Amount required for NFT. Only for the first 100000.
     nft_cost: Int as coins = ton("1");
     // Information about collection
@@ -35,27 +40,39 @@ contract NftEggsCollection with Deployable, Ownable {
     init(
         owner_address: Address,
         bank_address: Address,
+        hatchery_builder_address: Address,
         collection_content: Cell,
         royalty_params: RoyaltyParams
     ) {
-        self.owner              = owner_address;
-        self.bank               = bank_address;
-        self.collection_content = collection_content;
-        self.royalty_params     = royalty_params;
+        self.owner                    = owner_address;
+        self.bank_address             = bank_address;
+        self.hatchery_builder_address = hatchery_builder_address;
+        self.collection_content       = collection_content;
+        self.royalty_params           = royalty_params;
     }
 
+    // Classic mint for sender
     receive("Mint") {
         let ctx: Context = context();
         // The owner is not supposed to be involved in the minting of NFTs for themselves
         require(self.owner != sender(), "Owner can't mint NFT");
-        require(self.next_item_index >= 0, "Non-sequential NFTs");
-        require(self.next_item_index <= self.max_nft_number, "The NFT quantity limit has been exhausted");
+        require(self.first_generation_counter <= self.max_nft_number, "The NFT quantity limit has been exhausted");
         require(ctx.value >= self.nft_cost, "Not enough coins transferred");
 
         self.mint(sender());
+        self.first_generation_counter = self.first_generation_counter + 1;
+    }
+
+    // Mint as the birth of a new egg
+    receive(msg: MintFromHatchery) {
+        require(self.hatchery_builder_address == sender(), "Only hatchery builder can create new nft");
+
+        self.mint(msg.receiver);
     }
 
     fun mint(receiver: Address) {
+        require(self.next_item_index >= 0, "Non-sequential NFTs");
+
         let ctx: Context = context();
         let nft_init: StateInit = self.get_nft_item_state_init(self.next_item_index);
 
@@ -65,7 +82,7 @@ contract NftEggsCollection with Deployable, Ownable {
             // The value will be sent to the owner's wallet for future spending
             value: self.transaction_fee() + self.service_fee(),
             mode: SendIgnoreErrors,
-            body: Transfer {
+            body: Transfer{
                 query_id: 0,
                 new_owner: receiver,
                 response_destination: self.owner,
@@ -79,14 +96,14 @@ contract NftEggsCollection with Deployable, Ownable {
 
         // Sending the balance to the bank wallet
         send(SendParameters{
-            to: self.bank,
+            to: self.bank_address,
             value: self.profit_amount(),
             mode: SendIgnoreErrors
         });
 
         // Sender notification
         emit(EventMintRecord{
-            minter: sender(),
+            minter: receiver,
             item_id: self.next_item_index, 
             generate_number: nativeRandom() 
         }.toCell());
@@ -116,8 +133,13 @@ contract NftEggsCollection with Deployable, Ownable {
     }
 
     receive(msg: BankAddressUpdate) {   
-        require(self.bank == sender(), "Only bank can set new bank address");
-        self.bank = msg.bank_address;
+        require(self.bank_address == sender(), "Only bank can set new bank address");
+        self.bank_address = msg.bank_address;
+    }
+
+    receive(msg: OwnerAddressUpdate) {   
+        require(self.owner == sender(), "Only owner can set new owner address");
+        self.owner = msg.owner_address;
     }
 
 

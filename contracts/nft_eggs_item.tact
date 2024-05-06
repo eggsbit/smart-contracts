@@ -27,8 +27,8 @@ contract NftEggsItem with Deployable {
         require(sender() == collection_address, "Only collection can init nft");
 
         self.collection_address = collection_address;
-        self.item_index = item_index;
-        self.is_initialized = false;
+        self.item_index         = item_index;
+        self.is_initialized     = false;
     }
 
     receive(msg: Transfer) {
@@ -101,6 +101,8 @@ contract NftEggsItem with Deployable {
         });
     }
 
+
+    // ------------------ Get Function  ------------------ //
     get fun get_nft_data(): GetNftData {
         return GetNftData{
             is_initialized: self.is_initialized, 

@@ -1,10 +1,10 @@
 message(0x5fcc3d14) Transfer { 
-    query_id: Int as uint64;                    
-    new_owner: Address;                         
-    response_destination: Address?;              
-    custom_payload: Cell?;                      
-    forward_amount: Int as coins;               
-    forward_payload: Slice as remaining;        
+    query_id: Int as uint64;
+    new_owner: Address;
+    response_destination: Address?;
+    custom_payload: Cell?;
+    forward_amount: Int as coins;
+    forward_payload: Slice as remaining;
 }
 
 message EventMintRecord {
@@ -52,4 +52,9 @@ message NftCostUpdate {
 message BankAddressUpdate {
     query_id: Int as uint64;
     bank_address: Address;
+}
+
+message OwnerAddressUpdate {
+    query_id: Int as uint64;
+    owner_address: Address;
 }
