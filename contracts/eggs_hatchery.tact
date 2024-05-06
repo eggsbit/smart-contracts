@@ -19,7 +19,7 @@ contract EggsHatchery with Deployable {
     is_contract_fulfilled: Bool = false;
     // List of addresses from which we are waiting for transactions 
     // to be accepted to perform the birth of a new egg
-    parent_list: map<Int, ParentHatcheryStatus>;
+    parent_list: map<Int as uint8, ParentHatcheryStatus>;
     // The amount needed for each parent to give birth to new eggs
     birth_cost: Int as coins = ton("0.5");
 
@@ -64,17 +64,17 @@ contract EggsHatchery with Deployable {
 
             if(parent_info != null) {
                 send(SendParameters{
-                to: self.builder_address,
-                value: self.transaction_amount() / self.parents_number,
-                mode: SendIgnoreErrors,
-                body: MintFromHatchery{
-                    query_id: 0,
-                    hatchery_index: self.item_index,
-                    receiver: (parent_info!!).parent_address
-                }.toCell()
-            });
+                    to: self.builder_address,
+                    value: self.transaction_amount() / self.parents_number,
+                    mode: SendIgnoreErrors,
+                    body: MintFromHatchery{
+                        query_id: 0,
+                        hatchery_index: self.item_index,
+                        receiver: (parent_info!!).parent_address
+                    }.toCell()
+                });
 
-            index = index + 1;
+                index = index + 1;
             }
         }
     }
@@ -127,7 +127,7 @@ contract EggsHatchery with Deployable {
 
 
     // ------------------ Get Function  ------------------ //
-    get fun get_parent_list(): map<Int, ParentHatcheryStatus> {
+    get fun get_parent_list(): map<Int as uint8, ParentHatcheryStatus> {
         return self.parent_list;
     }
 

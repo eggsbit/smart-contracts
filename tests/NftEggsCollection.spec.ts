@@ -67,7 +67,7 @@ describe('NftEggsCollection', () => {
         const beforeDeployerBalance = await deployer.getBalance();
         const beforeBankBalance = await bank.getBalance();
 
-        await nftEggsCollection.send(player1.getSender(), { value: toNano("1") }, 'Mint');
+        await nftEggsCollection.send(player1.getSender(), { value: toNano('1') }, 'Mint');
 
         const afterNftCollecionData = await nftCollecion.getGetCollectionData();
         const afterPlayerBalance = await player1.getBalance();
@@ -92,7 +92,7 @@ describe('NftEggsCollection', () => {
     });
 
     it("shouldn't mint nft for owner", async () => {
-        const result = await nftEggsCollection.send(deployer.getSender(), { value: toNano("1") }, 'Mint');
+        const result = await nftEggsCollection.send(deployer.getSender(), { value: toNano('1') }, 'Mint');
 
         // The wallet owner can't mint a new NFT
         expect(result.transactions).toHaveTransaction({
@@ -103,7 +103,7 @@ describe('NftEggsCollection', () => {
     });
 
     it('should transfer nft', async () => {
-        const result = await nftEggsCollection.send(player1.getSender(), { value: toNano("1") }, 'Mint');
+        const result = await nftEggsCollection.send(player1.getSender(), { value: toNano('1') }, 'Mint');
 
         const nftItemAddress = await nftEggsCollection.getGetNftAddressByIndex(0n);
         const nftItem: SandboxContract<NftEggsItem> = blockchain.openContract(NftEggsItem.fromAddress(nftItemAddress));
@@ -115,7 +115,7 @@ describe('NftEggsCollection', () => {
         
         await nftItem.send(
             player1.getSender(),
-            { value: toNano("0.2") },
+            { value: toNano('0.05') },
             { 
                 $$type: 'Transfer',
                 new_owner: player2.address,
@@ -146,7 +146,7 @@ describe('NftEggsCollection', () => {
         for (let i = 0n; i <= max_nft_number; i++) {
             console.log('step number:' + i + '/' + max_nft_number);
             const player: SandboxContract<TreasuryContract> = await blockchain.treasury('player' + i);
-            await nftEggsCollection.send(player.getSender(), { value: toNano("1") }, 'Mint');
+            await nftEggsCollection.send(player.getSender(), { value: toNano('1') }, 'Mint');
 
             const nftItemAddress = await nftEggsCollection.getGetNftAddressByIndex(i);
             const nftItem: SandboxContract<NftEggsItem> = blockchain.openContract(NftEggsItem.fromAddress(nftItemAddress));
@@ -158,7 +158,7 @@ describe('NftEggsCollection', () => {
         }
 
         const lastPlayer: SandboxContract<TreasuryContract> = await blockchain.treasury('lastPlayer');
-        const result = await nftEggsCollection.send(lastPlayer.getSender(), { value: toNano("1") }, 'Mint');
+        const result = await nftEggsCollection.send(lastPlayer.getSender(), { value: toNano('1') }, 'Mint');
 
         // The last user can't get nft because collection limit is exceeded.
         expect(result.transactions).toHaveTransaction({
@@ -177,5 +177,118 @@ describe('NftEggsCollection', () => {
 
         console.log(fromNano(beforeDeployerBalance).toString() + ' -> ' + fromNano(afterDeployerBalance).toString());
         console.log(fromNano(beforeBankBalance).toString() + ' -> ' + fromNano(afterBankBalance).toString());
+    });
+
+    it('should bank address be changable', async () => {
+        const nftCollecion: SandboxContract<NftEggsCollection> = blockchain.openContract(NftEggsCollection.fromAddress(nftEggsCollection.address));
+        let nftCollecionBankAddress = await nftCollecion.getGetBankAddress();
+
+        // The bank address equal to original bank address
+        expect(nftCollecionBankAddress).toEqualAddress(bank.address);
+
+        let newBank: SandboxContract<TreasuryContract> = await blockchain.treasury('newBank');
+
+        await nftEggsCollection.send(
+            newBank.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'BankAddressUpdate',
+                query_id: 0n,
+                bank_address: newBank.address
+            }
+        );
+
+        nftCollecionBankAddress = await nftCollecion.getGetBankAddress();
+        // The bank address wasn't changed
+        expect(nftCollecionBankAddress).toEqualAddress(bank.address);
+
+        await nftEggsCollection.send(
+            bank.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'BankAddressUpdate',
+                query_id: 0n,
+                bank_address: newBank.address
+            }
+        );
+
+        nftCollecionBankAddress = await nftCollecion.getGetBankAddress();
+        // The bank address has been changed successfully
+        expect(nftCollecionBankAddress).toEqualAddress(newBank.address);
+    });
+
+    it('should owner address be changable', async () => {
+        const nftCollecion: SandboxContract<NftEggsCollection> = blockchain.openContract(NftEggsCollection.fromAddress(nftEggsCollection.address));
+        let nftCollecionData = await nftCollecion.getGetCollectionData();
+
+        // The owner address equal to original owner address
+        expect(nftCollecionData.owner_address).toEqualAddress(deployer.address);
+
+        let newDeployer: SandboxContract<TreasuryContract> = await blockchain.treasury('newDeployer');
+
+        await nftEggsCollection.send(
+            newDeployer.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'OwnerAddressUpdate',
+                query_id: 0n,
+                owner_address: newDeployer.address
+            }
+        );
+
+        nftCollecionData = await nftCollecion.getGetCollectionData();
+        // The owner address wasn't changed
+        expect(nftCollecionData.owner_address).toEqualAddress(deployer.address);
+
+        await nftEggsCollection.send(
+            deployer.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'OwnerAddressUpdate',
+                query_id: 0n,
+                owner_address: newDeployer.address
+            }
+        );
+
+        nftCollecionData = await nftCollecion.getGetCollectionData();
+        // The owner address has been changed successfully
+        expect(nftCollecionData.owner_address).toEqualAddress(newDeployer.address);
+    });
+
+    it('should nft cost be changable', async () => {
+        const newNftCost = 5n;
+
+        const nftCollecion: SandboxContract<NftEggsCollection> = blockchain.openContract(NftEggsCollection.fromAddress(nftEggsCollection.address));
+        const beforeNftCollecionCost = await nftCollecion.getGetNftCost();
+
+        let newDeployer: SandboxContract<TreasuryContract> = await blockchain.treasury('newDeployer');
+
+        await nftEggsCollection.send(
+            newDeployer.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'NftCostUpdate',
+                query_id: 0n,
+                nft_cost: newNftCost
+            }
+        );
+
+        let nftCollecionCost = await nftCollecion.getGetNftCost();
+        // The nft cost wasn't changed
+        expect(nftCollecionCost).toEqual(beforeNftCollecionCost);
+
+        await nftEggsCollection.send(
+            deployer.getSender(),
+            { value: toNano('0.05') },
+            {
+                $$type: 'NftCostUpdate',
+                query_id: 0n,
+                nft_cost: newNftCost
+            }
+        );
+
+        nftCollecionCost = await nftCollecion.getGetNftCost();
+        // The owner address has been changed successfully
+        expect(nftCollecionCost).toEqual(newNftCost);        
     });
 });

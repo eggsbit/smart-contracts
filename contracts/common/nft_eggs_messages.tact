@@ -53,8 +53,3 @@ message BankAddressUpdate {
     query_id: Int as uint64;
     bank_address: Address;
 }
-
-message OwnerAddressUpdate {
-    query_id: Int as uint64;
-    owner_address: Address;
-}

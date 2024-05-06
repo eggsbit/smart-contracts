@@ -2,7 +2,7 @@ import "./eggs_hatchery_structures.tact";
 
 message CreateEggsHatchery {
     query_id: Int as uint64;
-    parent_list: map<Int, ParentHatcheryStatus>;
+    parent_list: map<Int as uint8, ParentHatcheryStatus>;
     birth_cost: Int? as coins;
 }
 

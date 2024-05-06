@@ -1,6 +1,7 @@
 import "@stdlib/deploy";
 import "@stdlib/ownable";
 import "./eggs_hatchery.tact";
+import "./common/common_messages.tact";
 import "./common/eggs_hatchery_messages.tact";
 import "./common/eggs_hatchery_structures.tact";
 
@@ -75,6 +76,11 @@ contract EggsHatcheryBuilder with Deployable, Ownable {
     receive(msg: BirthCostUpdate) {   
         require(self.owner == sender(), "Only owner can set new birth cost value");
         self.birth_cost = msg.birth_cost;
+    }
+
+    receive(msg: OwnerAddressUpdate) {   
+        require(self.owner == sender(), "Only owner can set new owner address");
+        self.owner = msg.owner_address;
     }
 
     // ------------------ Get Function  ------------------ //

@@ -1,6 +1,8 @@
 import "@stdlib/deploy";
 import "@stdlib/ownable";
 import "./nft_eggs_item.tact";
+import "./eggs_hatchery_builder.tact";
+import "./common/common_messages.tact";
 import "./common/nft_eggs_messages.tact";
 import "./common/nft_eggs_structures.tact";
 import "./common/eggs_hatchery_messages.tact";
@@ -24,8 +26,6 @@ contract NftEggsCollection with Deployable, Ownable {
     owner: Address;
     // Address of the wallet, which will be replenished with profits
     bank_address: Address;
-    // Contract is used for validation messages from hatcheries
-    hatchery_builder_address: Address;
     // Index of next NFT item
     next_item_index: Int as uint64 = 0;
     // Counter for first eggs generation
@@ -40,13 +40,11 @@ contract NftEggsCollection with Deployable, Ownable {
     init(
         owner_address: Address,
         bank_address: Address,
-        hatchery_builder_address: Address,
         collection_content: Cell,
         royalty_params: RoyaltyParams
     ) {
         self.owner                    = owner_address;
         self.bank_address             = bank_address;
-        self.hatchery_builder_address = hatchery_builder_address;
         self.collection_content       = collection_content;
         self.royalty_params           = royalty_params;
     }
@@ -65,7 +63,7 @@ contract NftEggsCollection with Deployable, Ownable {
 
     // Mint as the birth of a new egg
     receive(msg: MintFromHatchery) {
-        require(self.hatchery_builder_address == sender(), "Only hatchery builder can create new nft");
+        require(self.get_hatchery_builder_address() == sender(), "Only hatchery builder can create new nft");
 
         self.mint(msg.receiver);
     }
@@ -132,14 +130,14 @@ contract NftEggsCollection with Deployable, Ownable {
         self.nft_cost = msg.nft_cost;
     }
 
-    receive(msg: BankAddressUpdate) {   
-        require(self.bank_address == sender(), "Only bank can set new bank address");
-        self.bank_address = msg.bank_address;
-    }
-
     receive(msg: OwnerAddressUpdate) {   
         require(self.owner == sender(), "Only owner can set new owner address");
         self.owner = msg.owner_address;
+    }
+
+    receive(msg: BankAddressUpdate) {   
+        require(self.bank_address == sender(), "Only bank can set new bank address");
+        self.bank_address = msg.bank_address;
     }
 
 
@@ -178,6 +176,15 @@ contract NftEggsCollection with Deployable, Ownable {
 
     get fun get_nft_cost(): Int {
         return self.nft_cost;
+    }
+
+    get fun get_bank_address(): Address {
+        return self.bank_address;
+    }
+
+    get fun get_hatchery_builder_address(): Address {
+        let hatchery_builder: StateInit = initOf EggsHatcheryBuilder(self.owner, myAddress());
+        return contractAddress(hatchery_builder);
     }
 
 
