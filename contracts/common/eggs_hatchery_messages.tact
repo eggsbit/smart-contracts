@@ -12,8 +12,3 @@ message MintFromHatchery {
     hatchery_index: Int as uint64;
     receiver: Address;
 }
-
-message BirthCostUpdate {
-    query_id: Int as uint64;
-    birth_cost: Int as coins;
-}

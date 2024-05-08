@@ -63,9 +63,7 @@ contract NftEggsCollection with Deployable, Ownable {
 
     // Mint as the birth of a new egg
     receive(msg: MintFromHatchery) {
-        dump("MintFromHatchery");
         require(self.get_hatchery_builder_address() == sender(), "Only hatchery builder can create new nft");
-        dump("After address validation");
 
         self.mint(msg.receiver);
     }
@@ -127,6 +125,26 @@ contract NftEggsCollection with Deployable, Ownable {
         });        
     }
 
+    // Create a hatchery builder from collection.
+    // It's a single way because we can't provide the adresses to collection and builder - it's circle dependencies.
+    // We can't predict the contract name because the contract address in tests and the result of contractAddress
+    // inside the contract are different.
+    receive("CreateHatcherBuilder") {
+        require(self.owner == sender(), "Only owner can create hatchery builder");
+
+        let hatchery_builder: StateInit = self.get_hatchery_builder_state_init();
+        send(SendParameters{
+            to: contractAddress(hatchery_builder),
+            value: 0,
+            mode: SendRemainingValue + SendIgnoreErrors,
+            body: Deploy{
+                queryId: 0
+            }.toCell(),
+            code: hatchery_builder.code,
+            data: hatchery_builder.data
+        });
+    }
+
     receive(msg: NftCostUpdate) {   
         require(self.owner == sender(), "Only owner can set new nft cost");
         self.nft_cost = msg.nft_cost;
@@ -185,8 +203,12 @@ contract NftEggsCollection with Deployable, Ownable {
         return self.bank_address;
     }
 
+    get fun get_hatchery_builder_state_init(): StateInit {
+        return initOf EggsHatcheryBuilder(self.owner, myAddress());
+    }
+
     get fun get_hatchery_builder_address(): Address {
-        let hatchery_builder: StateInit = initOf EggsHatcheryBuilder(self.owner, myAddress());
+        let hatchery_builder: StateInit = self.get_hatchery_builder_state_init(); 
         return contractAddress(hatchery_builder);
     }
 

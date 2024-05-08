@@ -5,7 +5,7 @@ import "./common/eggs_hatchery_structures.tact";
 contract EggsHatchery with Deployable {
 
     // TON coins that we will keep on contract to pay storage fees
-    const min_ton_for_storage: Int = ton("0.02");
+    const min_ton_for_storage: Int = ton("0.03");
     // The amount of TON we will pay for the running code in TWM
     const gas_consumtion: Int = ton("0.03");
 
@@ -22,7 +22,7 @@ contract EggsHatchery with Deployable {
     // List of payment statuses for each parent
     parent_payment_status_list: map<Address, Bool>;
     // The amount needed for each parent to give birth to new eggs
-    birth_cost: Int as coins = ton("0.5");
+    birth_cost: Int as coins = ton("1");
 
     init(
         builder_address: Address,
@@ -112,8 +112,7 @@ contract EggsHatchery with Deployable {
             birth_cost:                 self.birth_cost,
             parent_one:                 self.parent_one,
             parent_two:                 self.parent_two,
-            parent_payment_status_list: self.parent_payment_status_list,
-            balance:               myBalance()
+            parent_payment_status_list: self.parent_payment_status_list
         };
     }
 

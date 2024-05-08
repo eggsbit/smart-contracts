@@ -2,8 +2,5 @@ import { CompilerConfig } from '@ton/blueprint';
 
 export const compile: CompilerConfig = {
     lang: 'tact',
-    target: 'contracts/eggs_hatchery_builder.tact',
-    options: {
-        debug: true
-    }
+    target: 'contracts/eggs_hatchery_builder.tact'
 };
