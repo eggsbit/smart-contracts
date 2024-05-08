@@ -63,7 +63,9 @@ contract NftEggsCollection with Deployable, Ownable {
 
     // Mint as the birth of a new egg
     receive(msg: MintFromHatchery) {
+        dump("MintFromHatchery");
         require(self.get_hatchery_builder_address() == sender(), "Only hatchery builder can create new nft");
+        dump("After address validation");
 
         self.mint(msg.receiver);
     }
@@ -146,7 +148,8 @@ contract NftEggsCollection with Deployable, Ownable {
         return CollectionData{
             next_item_index: self.next_item_index,
             collection_content: self.collection_content,
-            owner_address: self.owner
+            owner_address: self.owner,
+            balance: myBalance()
         };
     }
 

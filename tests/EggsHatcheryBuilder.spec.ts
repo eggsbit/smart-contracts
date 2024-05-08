@@ -1,6 +1,6 @@
 import { Blockchain, SandboxContract, TreasuryContract } from '@ton/sandbox';
-import { toNano, beginCell, Dictionary } from '@ton/core';
-import { EggsHatcheryBuilder, ParentHatcheryStatus } from '../wrappers/EggsHatcheryBuilder';
+import { toNano, beginCell, Dictionary, fromNano, Address } from '@ton/core';
+import { EggsHatcheryBuilder } from '../wrappers/EggsHatcheryBuilder';
 import { NftEggsCollection } from '../wrappers/NftEggsCollection';
 import { EggsHatchery } from '../wrappers/EggsHatchery';
 import '@ton/test-utils';
@@ -83,25 +83,19 @@ describe('EggsHatcheryBuilder', () => {
     it('should create hatchery', async () => {
         const parent1: SandboxContract<TreasuryContract> = await blockchain.treasury('parent1');
         const parent2: SandboxContract<TreasuryContract> = await blockchain.treasury('parent2');
-
-        const hatcheryBuilder: SandboxContract<EggsHatcheryBuilder> = blockchain.openContract(EggsHatcheryBuilder.fromAddress(eggsHatcheryBuilder.address));
-        const beforeHatcheryBuilderData = await hatcheryBuilder.getGetHatcheryBuilderData();
+        const beforeHatcheryBuilderData = await eggsHatcheryBuilder.getGetHatcheryBuilderData();
 
         // The index counter is now 0. We have no hatcheries.
         expect(beforeHatcheryBuilderData.next_item_index).toEqual(0n);
 
-        // Create parent list before sending
-        const parent_list = Dictionary.empty<number, ParentHatcheryStatus>();
-        parent_list.set(0, {$$type: 'ParentHatcheryStatus', parent_address: parent1.address, has_parent_paid: false});
-        parent_list.set(1, {$$type: 'ParentHatcheryStatus', parent_address: parent2.address, has_parent_paid: false});
-
-        const createEggsHatcheryResult = await eggsHatcheryBuilder.send(
+        await eggsHatcheryBuilder.send(
             deployer.getSender(),
             { value: toNano('0.1') },
             {
                 $$type: 'CreateEggsHatchery',
                 query_id: 0n,
-                parent_list: parent_list,
+                parent_one: parent1.address,
+                parent_two: parent2.address,
                 birth_cost: null
             }
         );
@@ -114,15 +108,81 @@ describe('EggsHatcheryBuilder', () => {
         expect(hatcheryData.is_contract_fulfilled).toEqual(false);
 
         // Hatchery was created and it has the same parent list
-        const hatcheryParentList = await hatcheryItem.getGetParentList();
-        const hatcheryParent1 = hatcheryParentList.get(0);
-        const hatcheryParent2 = hatcheryParentList.get(1);
-        expect(hatcheryParent1?.parent_address).toEqualAddress(parent1.address);
-        expect(hatcheryParent2?.parent_address).toEqualAddress(parent2.address);
+        expect(hatcheryData.parent_one).toEqualAddress(parent1.address);
+        expect(hatcheryData.parent_two).toEqualAddress(parent2.address);
     });
 
     it('should hatchery mint new nft item', async () => {
+        const parent1: SandboxContract<TreasuryContract> = await blockchain.treasury('parent1');
+        const parent2: SandboxContract<TreasuryContract> = await blockchain.treasury('parent2');
+        const parent3: SandboxContract<TreasuryContract> = await blockchain.treasury('parent3');
+
+        const beforeNftCollecionData = await nftEggsCollection.getGetCollectionData();
+        const beforeHatcheryBuilderData = await eggsHatcheryBuilder.getGetHatcheryBuilderData();
+
+        // // Nft collection is empty
+        expect(beforeNftCollecionData.next_item_index).toEqual(0n);
+        expect(beforeHatcheryBuilderData.next_item_index).toEqual(0n);
+        // console.log('beforeNftCollecionData.balance: ');
+        // console.log(fromNano(beforeNftCollecionData.balance));
+
+        // console.log('beforeHatcheryBuilderData.balance: ');
+        // console.log(fromNano(beforeHatcheryBuilderData.balance));
+
+        await eggsHatcheryBuilder.send(
+            deployer.getSender(),
+            { value: toNano('0.2') },
+            {
+                $$type: 'CreateEggsHatchery',
+                query_id: 0n,
+                parent_one: parent1.address,
+                parent_two: parent2.address,
+                birth_cost: null
+            }
+        );
+        // //console.log(respCreate);
+
+        const afterHatcheryBuilderData = await eggsHatcheryBuilder.getGetHatcheryBuilderData();
+        expect(afterHatcheryBuilderData.next_item_index).toStrictEqual(1n);
+
+        // console.log('afterHatcheryBuilderData.balance: ');
+        // console.log(fromNano(afterHatcheryBuilderData.balance));
+
+        const hatcheryAddress = await eggsHatcheryBuilder.getGetHatcheryAddressByIndex(beforeHatcheryBuilderData.next_item_index);
+        const hatcheryItem: SandboxContract<EggsHatchery> = blockchain.openContract(EggsHatchery.fromAddress(hatcheryAddress));       
         
+        // const beforeHatcheryData = await hatcheryItem.getGetHatcheryData();
+        // console.log('beforeHatcheryData.balance: ');
+        // console.log(fromNano(beforeHatcheryData.balance));
+        // expect(beforeHatcheryData.is_contract_fulfilled).toStrictEqual(false);
+
+        // // only parents can send messages to hatchery contract
+        // // let eggsBirthResult = await hatcheryItem.send(parent3.getSender(), { value: toNano('0.5') }, 'EggsBirth');
+        // // expect(eggsBirthResult.transactions).toHaveTransaction({
+        // //     from: parent3.address,
+        // //     to: hatcheryItem.address,
+        // //     success: false,
+        // // });
+
+        const res1 = await hatcheryItem.send(parent1.getSender(), { value: toNano('0.5') }, 'EggsBirth');
+        const res2 = await hatcheryItem.send(parent2.getSender(), { value: toNano('0.5') }, 'EggsBirth');
+        // console.log(res1);
+        // console.log(res2);
+        const afterHatcheryData = await hatcheryItem.getGetHatcheryData();
+
+        console.log(afterHatcheryData);
+        // console.log(hatcheryParentList);
+
+        // Nft collection contains two new NFTs
+        const afterNftCollecionData = await nftEggsCollection.getGetCollectionData();
+        console.log(afterNftCollecionData);
+
+        console.log(hatcheryItem.address);
+        console.log(eggsHatcheryBuilder.address);
+        console.log(await nftEggsCollection.getGetHatcheryBuilderAddress());
+        // console.log(await nftEggsCollection.getOwner());
+        // console.log(await eggsHatcheryBuilder.getOwner());
+        //expect(afterNftCollecionData.next_item_index).toStrictEqual(2n);
     });
 
     it('should owner address be changable', async () => {

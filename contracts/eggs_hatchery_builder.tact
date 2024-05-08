@@ -42,11 +42,12 @@ contract EggsHatcheryBuilder with Deployable, Ownable {
 
         send(SendParameters{
             to: contractAddress(hatchery_init),
-            value: self.init_transaction_amount(),
-            mode: SendIgnoreErrors,
+            value: 0,
+            mode: SendRemainingValue + SendIgnoreErrors,
             body: CreateEggsHatchery{
                 query_id: msg.query_id,
-                parent_list: msg.parent_list,
+                parent_one: msg.parent_one,
+                parent_two: msg.parent_two,
                 birth_cost: msg.birth_cost
             }.toCell(),
             code: hatchery_init.code,
@@ -60,7 +61,7 @@ contract EggsHatcheryBuilder with Deployable, Ownable {
     receive(msg: MintFromHatchery) {
         let hatchery_init: StateInit = self.get_hatchery_item_state_init(msg.hatchery_index);
         require(contractAddress(hatchery_init) == sender(), "Only hatchery can send a message to mint");
-
+        dump("Send MintFromHatchery to collection");
         send(SendParameters{
             to: self.collection_address,
             value: self.init_transaction_amount(),
@@ -89,7 +90,8 @@ contract EggsHatcheryBuilder with Deployable, Ownable {
             owner_address:      self.owner,
             collection_address: self.collection_address,
             next_item_index:    self.next_item_index,
-            birth_cost:         self.birth_cost
+            birth_cost:         self.birth_cost,
+            balance:            myBalance()
         };
     }
 
