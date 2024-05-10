@@ -47,5 +47,7 @@ export async function run(provider: NetworkProvider) {
         'CreateHatcherBuilder'
     );
 
+    await provider.waitForDeploy(await nftEggsCollection.getGetHatcheryBuilderAddress());
+
     console.log('hatcgery buider address: ' + (await nftEggsCollection.getGetHatcheryBuilderAddress()).toString());
 }
