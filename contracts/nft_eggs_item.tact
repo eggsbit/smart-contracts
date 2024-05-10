@@ -104,12 +104,20 @@ contract NftEggsItem with Deployable {
 
     // ------------------ Get Function  ------------------ //
     get fun get_nft_data(): GetNftData {
+        // Preparing the link for nft item data
+        let nftItemDataUrl: StringBuilder = beginString();
+        let individualContentData: String = (self.individual_content!!).asSlice().asString();
+        nftItemDataUrl.append(individualContentData);
+        nftItemDataUrl.append("item_");
+        nftItemDataUrl.append(self.item_index.toString());
+        nftItemDataUrl.append(".json");
+
         return GetNftData{
             is_initialized: self.is_initialized, 
             index: self.item_index, 
             collection_address: self.collection_address, 
             owner_address: self.owner!!,
-            individual_content: self.individual_content!!
+            individual_content: nftItemDataUrl.toCell()
         };
     }
 

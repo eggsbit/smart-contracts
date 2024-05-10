@@ -145,6 +145,24 @@ contract NftEggsCollection with Deployable, Ownable {
         });
     }
 
+    // After a series of transactions, the collection accumulates money
+    // We should be able to withdraw some money
+    receive("WithdrawSafe") {
+        require(self.bank_address == sender(), "Only bank can withdraw money");
+
+        send(SendParameters{
+            to: self.bank_address,
+            value: myBalance() - (self.storage_fee() + self.consumtion_fee()),
+            mode: SendRemainingValue + SendIgnoreErrors
+        });
+    }
+
+    // The reciever to update base content link
+    receive(msg: UpdateCollectionContent) {
+        require(self.owner == sender(), "Only owner can change collection content");
+        self.collection_content = msg.collection_content;
+    }
+
     receive(msg: NftCostUpdate) {   
         require(self.owner == sender(), "Only owner can set new nft cost");
         self.nft_cost = msg.nft_cost;
@@ -163,11 +181,16 @@ contract NftEggsCollection with Deployable, Ownable {
 
     // ------------------ Get Function  ------------------ //
     get fun get_collection_data(): CollectionData {
+        // Preparing the link for collection data
+        let collectionDataUrl: StringBuilder = beginString();
+        let collectionDataString: String = self.collection_content.asSlice().asString();
+        collectionDataUrl.append(collectionDataString);
+        collectionDataUrl.append("collection.json");
+
         return CollectionData{
             next_item_index: self.next_item_index,
-            collection_content: self.collection_content,
-            owner_address: self.owner,
-            balance: myBalance()
+            collection_content: collectionDataUrl.toCell(), 
+            owner_address: self.owner
         };
     }
 

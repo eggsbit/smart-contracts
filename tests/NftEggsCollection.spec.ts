@@ -20,7 +20,7 @@ describe('NftEggsCollection', () => {
         player2 = await blockchain.treasury('player2');
 
         const OFFCHAIN_CONTENT_PREFIX = 0x01;
-        const string_first = "https://s.getgems.io/nft-staging/c/628f6ab8077060a7a8d52d63/";
+        const string_first = 'https://gateway.pinata.cloud/ipfs/QmVWMeEni343TqrNRCkn6nNgKtnpx3HoAJkW7UGVm3G6aE/';
         const collection_content = beginCell().storeInt(OFFCHAIN_CONTENT_PREFIX, 8).storeStringRefTail(string_first).endCell();
 
         nftEggsCollection = blockchain.openContract(await NftEggsCollection.fromInit(

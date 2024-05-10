@@ -53,3 +53,8 @@ message BankAddressUpdate {
     query_id: Int as uint64;
     bank_address: Address;
 }
+
+message UpdateCollectionContent {
+    query_id: Int as uint64;
+    collection_content: Cell;
+}
