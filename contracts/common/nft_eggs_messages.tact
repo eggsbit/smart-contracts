@@ -36,7 +36,7 @@ message(0x2fcb26a2) GetStaticData {
 
 message(0x8b771735) ReportStaticData {
     query_id: Int as uint64;
-    index_id: Int;
+    index: Int;
     collection: Address;
 }
 
@@ -54,7 +54,17 @@ message BankAddressUpdate {
     bank_address: Address;
 }
 
-message UpdateCollectionContent {
+message EditorAddressUpdate {
     query_id: Int as uint64;
-    collection_content: Cell;
+    editor_address: Address;
+}
+
+message UpdateContent {
+    query_id: Int as uint64;
+    content: Cell;
+}
+
+message UpdateIndividualContent {
+    query_id: Int as uint64;
+    individual_content: Cell;
 }

@@ -7,9 +7,8 @@ import "./common/eggs_hatchery_structures.tact";
 
 contract EggsHatcheryBuilder with Deployable, Ownable {
 
-    // Smart contract version for development
-    const contract_version: String = "dev1.0.0";
-
+    // Id to change contract before new deploy
+    id: Int as uint32;
     // Contract owner. He has the right to make changes. Master wallet.
     owner: Address;
     // Collection address for transmitting messages
@@ -18,10 +17,12 @@ contract EggsHatcheryBuilder with Deployable, Ownable {
     next_item_index: Int as uint64 = 0;
 
     init(
+        id: Int,
         owner_address: Address,
         collection_address: Address
     ) {
-        self.owner = owner_address;
+        self.id                 = id;
+        self.owner              = owner_address;
         self.collection_address = collection_address;
     }
 

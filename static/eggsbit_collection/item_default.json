@@ -1,0 +1,6 @@
+{
+    "name": "Egg",
+    "description": "Just one simmple egg",
+    "image": "https://gateway.pinata.cloud/ipfs/QmbxpB1dTH3n2grMUkyZHKUkTrpNG3P9GmUVaMX7U2oc7q",
+    "attributes": [{ "trait_type": "Awesomeness", "value": "Super cool" }]
+ }

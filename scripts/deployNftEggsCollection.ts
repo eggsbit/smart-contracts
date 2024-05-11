@@ -33,7 +33,7 @@ export async function run(provider: NetworkProvider) {
         }
     );
 
-    await provider.waitForDeploy(nftEggsCollection.address);
+    await provider.waitForDeploy(nftEggsCollection.address, 40);
 
     // run methods on `nftEggsCollection`
     console.log('nftEggsCollection address: ' + nftEggsCollection.address.toString());
@@ -42,12 +42,12 @@ export async function run(provider: NetworkProvider) {
     await nftEggsCollection.send(
         provider.sender(),
         {
-            value: toNano('0.1'),
+            value: toNano('0.2'),
         },
         'CreateHatcherBuilder'
     );
 
-    await provider.waitForDeploy(await nftEggsCollection.getGetHatcheryBuilderAddress());
+    await provider.waitForDeploy(await nftEggsCollection.getGetHatcheryBuilderAddress(), 40);
 
     console.log('hatcgery buider address: ' + (await nftEggsCollection.getGetHatcheryBuilderAddress()).toString());
 }

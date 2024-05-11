@@ -46,6 +46,7 @@ contract EggsHatchery with Deployable {
 
     receive("EggsBirth") {
         require(self.is_sender_parent(), "Only parent can send message EggsBirth");
+        require(!self.has_parent_already_paid(), "Parent has already paid");
 
         let ctx: Context = context();
         require(ctx.value >= self.birth_cost, "Not enough coins transferred");
@@ -85,6 +86,11 @@ contract EggsHatchery with Deployable {
     fun is_sender_parent(): Bool
     {
         return sender() == self.parent_one || sender() == self.parent_two;
+    }
+
+    fun has_parent_already_paid(): Bool
+    {
+        return self.parent_payment_status_list.get(sender()) == true;
     }
 
     fun set_parent_payment_status(parent_address: Address, status: Bool) {

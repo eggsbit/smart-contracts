@@ -9,8 +9,8 @@ import "./common/eggs_hatchery_messages.tact";
 
 contract NftEggsCollection with Deployable, Ownable {
 
-    // Smart contract version for development
-    const contract_version: String = "dev1.0.0";
+    // Id to change contract before new deploy
+    id: Int as uint32;
     // Maximum number of NFTs. After that, the player can only buy NFTs on the market from other players.
     const max_nft_number: Int = 100000;
     // TON coins that we will keep on contract to pay storage fees
@@ -32,21 +32,27 @@ contract NftEggsCollection with Deployable, Ownable {
     first_generation_counter: Int as uint32 = 0;
     // Amount required for NFT. Only for the first 100000.
     nft_cost: Int as coins = ton("1");
-    // Information about collection
+    // Common collection url link
     collection_content: Cell;
+    // Individual collection url part
+    collection_individual_content: Cell;
     // Royalty collection information
     royalty_params: RoyaltyParams?;
 
     init(
+        id: Int,
         owner_address: Address,
         bank_address: Address,
         collection_content: Cell,
+        collection_individual_content: Cell,
         royalty_params: RoyaltyParams
     ) {
-        self.owner                    = owner_address;
-        self.bank_address             = bank_address;
-        self.collection_content       = collection_content;
-        self.royalty_params           = royalty_params;
+        self.id                            = id;
+        self.owner                         = owner_address;
+        self.bank_address                  = bank_address;
+        self.collection_content            = collection_content;
+        self.collection_individual_content = collection_individual_content;
+        self.royalty_params                = royalty_params;
     }
 
     // Classic mint for sender
@@ -72,7 +78,7 @@ contract NftEggsCollection with Deployable, Ownable {
         require(self.next_item_index >= 0, "Non-sequential NFTs");
 
         let ctx: Context = context();
-        let nft_init: StateInit = self.get_nft_item_state_init(self.next_item_index);
+        let nft_init: StateInit = self._get_nft_item_state_init(self.next_item_index);
 
         // Mint a new NFT
         send(SendParameters{
@@ -96,7 +102,8 @@ contract NftEggsCollection with Deployable, Ownable {
         send(SendParameters{
             to: self.bank_address,
             value: self.profit_amount(),
-            mode: SendIgnoreErrors
+            mode: SendPayGasSeparately,
+            body: Excesses{ query_id: 0 }.toCell()
         });
 
         // Sender notification
@@ -158,9 +165,14 @@ contract NftEggsCollection with Deployable, Ownable {
     }
 
     // The reciever to update base content link
-    receive(msg: UpdateCollectionContent) {
+    receive(msg: UpdateContent) {
         require(self.owner == sender(), "Only owner can change collection content");
-        self.collection_content = msg.collection_content;
+        self.collection_content = msg.content;
+    }
+
+    receive(msg: UpdateIndividualContent) {
+        require(self.owner == sender(), "Only owner can change collection individual content");
+        self.collection_individual_content = msg.individual_content;
     }
 
     receive(msg: NftCostUpdate) {   
@@ -179,13 +191,25 @@ contract NftEggsCollection with Deployable, Ownable {
     }
 
 
-    // ------------------ Get Function  ------------------ //
-    get fun get_collection_data(): CollectionData {
+    // ------------------ Internal Function  ------------------ //
+    override inline fun _get_nft_item_state_init(index: Int): StateInit {
+        let individual_content: StringBuilder = beginString();
+        individual_content.append("QmSoriupN2M8t3xNuhfYm7AfEYRBcjLNoNaVeJVwab67vA");
+
+        return initOf NftEggsItem(myAddress(), index, self.owner, individual_content.toCell());
+    }
+
+    override inline fun _get_nft_content(index: Int, individual_content: Cell): Cell { 
+        return individual_content;
+    }
+
+    override inline fun _get_collection_data(): CollectionData {
         // Preparing the link for collection data
         let collectionDataUrl: StringBuilder = beginString();
         let collectionDataString: String = self.collection_content.asSlice().asString();
+        let collectionIndividualDataString: String = self.collection_individual_content.asSlice().asString();
         collectionDataUrl.append(collectionDataString);
-        collectionDataUrl.append("collection.json");
+        collectionDataUrl.append(collectionIndividualDataString);
 
         return CollectionData{
             next_item_index: self.next_item_index,
@@ -194,24 +218,23 @@ contract NftEggsCollection with Deployable, Ownable {
         };
     }
 
-    get fun get_nft_address_by_index(item_index: Int): Address {
-        let nft_init: StateInit = self.get_nft_item_state_init(item_index); 
+
+    // ------------------ Get Function  ------------------ //
+    get fun get_collection_data(): CollectionData {
+        return self._get_collection_data();
+    }
+
+    get fun get_nft_address_by_index(index: Int): Address {
+        let nft_init: StateInit = self._get_nft_item_state_init(index);
         return contractAddress(nft_init);
     }
 
     get fun get_nft_content(index: Int, individual_content: Cell): Cell { 
-        let b: StringBuilder = beginString();
-        let ic: String = individual_content.asSlice().asString();
-        b.append(ic);
-        return b.toCell();
+        return self._get_nft_content(index, individual_content);
     }
 
     get fun royalty_params(): RoyaltyParams {
         return self.royalty_params!!;
-    }
-
-    get fun get_nft_item_state_init(item_index: Int): StateInit {
-        return initOf NftEggsItem(myAddress(), item_index);
     }
 
     get fun get_max_nft_number(): Int {
@@ -227,7 +250,7 @@ contract NftEggsCollection with Deployable, Ownable {
     }
 
     get fun get_hatchery_builder_state_init(): StateInit {
-        return initOf EggsHatcheryBuilder(self.owner, myAddress());
+        return initOf EggsHatcheryBuilder(self.id, self.owner, myAddress());
     }
 
     get fun get_hatchery_builder_address(): Address {

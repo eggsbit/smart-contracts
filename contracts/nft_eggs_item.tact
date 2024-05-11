@@ -1,12 +1,9 @@
 import "@stdlib/deploy";
-import "@stdlib/ownable";
 import "./common/nft_eggs_messages.tact";
 import "./common/nft_eggs_structures.tact";
 
 contract NftEggsItem with Deployable {
 
-    // Smart contract version for development
-    const contract_version: String = "dev1.0.0";
     // TON coins that we will keep on contract to pay storage fees
     const min_ton_for_storage: Int = ton("0.03");
     // The amount of TON we will pay for the running code in TWM
@@ -16,19 +13,25 @@ contract NftEggsItem with Deployable {
     owner: Address?;
     // Collection address. The NFT can be minted only from collection contract.
     collection_address: Address;
+    // Editor address. To update NFT metadata.
+    editor_address: Address;
     // NFT item id
-    item_index: Int as uint64;
+    index: Int as uint64;
     // Is the creation of the NFT complete
     is_initialized: Bool;
+    // Common url part for NFT item
+    content: Cell?;
     // Information about NFT item
-    individual_content: Cell?;
+    individual_content: Cell;
 
-    init(collection_address: Address, item_index: Int) {
+    init(collection_address: Address, index: Int, editor_address: Address, individual_content: Cell) {
         require(sender() == collection_address, "Only collection can init nft");
 
-        self.collection_address = collection_address;
-        self.item_index         = item_index;
         self.is_initialized     = false;
+        self.collection_address = collection_address;
+        self.index              = index;
+        self.editor_address     = editor_address;
+        self.individual_content = individual_content;
     }
 
     receive(msg: Transfer) {
@@ -45,7 +48,7 @@ contract NftEggsItem with Deployable {
 
         self.is_initialized = true;
         self.owner = msg.new_owner;
-        self.individual_content = msg.custom_payload;
+        self.content = msg.custom_payload;
 
         send(SendParameters{
             to: msg.response_destination!!,
@@ -95,26 +98,41 @@ contract NftEggsItem with Deployable {
             bounce: true,
             body: ReportStaticData{
                 query_id: msg.query_id,
-                index_id: self.item_index,
+                index: self.index,
                 collection: self.collection_address
             }.toCell()
         });
     }
 
+    // The reciever to update base content link
+    receive(msg: UpdateContent) {
+        require(self.editor_address == sender(), "Only editor can change content");
+        self.content = msg.content;
+    }
+
+    receive(msg: UpdateIndividualContent) {
+        require(self.editor_address == sender(), "Only editor can change individual content");
+        self.individual_content = msg.individual_content;
+    }
+
+    receive(msg: EditorAddressUpdate) {   
+        require(self.editor_address == sender(), "Only editor can set new editor address");
+        self.editor_address = msg.editor_address;
+    }
+
 
     // ------------------ Get Function  ------------------ //
-    get fun get_nft_data(): GetNftData {
+    get fun get_nft_data(): NftData {
         // Preparing the link for nft item data
         let nftItemDataUrl: StringBuilder = beginString();
-        let individualContentData: String = (self.individual_content!!).asSlice().asString();
+        let contentData: String = (self.content!!).asSlice().asString();
+        let individualContentData: String = (self.individual_content).asSlice().asString();
+        nftItemDataUrl.append(contentData);
         nftItemDataUrl.append(individualContentData);
-        nftItemDataUrl.append("item_");
-        nftItemDataUrl.append(self.item_index.toString());
-        nftItemDataUrl.append(".json");
 
-        return GetNftData{
+        return NftData{
             is_initialized: self.is_initialized, 
-            index: self.item_index, 
+            index: self.index, 
             collection_address: self.collection_address, 
             owner_address: self.owner!!,
             individual_content: nftItemDataUrl.toCell()

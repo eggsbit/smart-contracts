@@ -10,7 +10,7 @@ struct RoyaltyParams {
     destination: Address;
 }
 
-struct GetNftData {
+struct NftData {
     is_initialized: Bool;
     index: Int;
     collection_address: Address;
