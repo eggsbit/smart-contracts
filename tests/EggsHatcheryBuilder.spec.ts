@@ -20,17 +20,14 @@ describe('EggsHatcheryBuilder', () => {
 
         // ------------- Deploy Collection -------------\\
         const OFFCHAIN_CONTENT_PREFIX = 0x01;
-        const collection_content_string = 'https://gateway.pinata.cloud/ipfs/';
+        const collection_content_string = 'https://meta.test.eggsbit.io/meta/eggsbit/';
         const collection_content = beginCell().storeInt(OFFCHAIN_CONTENT_PREFIX, 8).storeStringRefTail(collection_content_string).endCell();
-        const collection_indivudial_content_string = 'QmdVcNwfLCMwmxAUzEJiNMgpyg2M2P6Hhe956KJCo9Pdye';
-        const collection_indivudial_content = beginCell().storeStringRefTail(collection_indivudial_content_string).endCell();
 
         nftEggsCollection = blockchain.openContract(await NftEggsCollection.fromInit(
             10n,
             deployer.address,
             bank.address,
             collection_content,
-            collection_indivudial_content,
             {
                 $$type: "RoyaltyParams",
                 numerator: 350n, // 350n = 35%

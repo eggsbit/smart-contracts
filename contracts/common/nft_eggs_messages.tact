@@ -59,7 +59,7 @@ message EditorAddressUpdate {
     editor_address: Address;
 }
 
-message UpdateContent {
+message(0x04) UpdateContent {
     query_id: Int as uint64;
     content: Cell;
 }

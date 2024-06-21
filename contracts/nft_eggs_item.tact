@@ -19,19 +19,16 @@ contract NftEggsItem with Deployable {
     index: Int as uint64;
     // Is the creation of the NFT complete
     is_initialized: Bool;
-    // Common url part for NFT item
-    content: Cell?;
     // Information about NFT item
-    individual_content: Cell;
+    individual_content: Cell?;
 
-    init(collection_address: Address, index: Int, editor_address: Address, individual_content: Cell) {
+    init(collection_address: Address, index: Int, editor_address: Address) {
         require(sender() == collection_address, "Only collection can init nft");
 
         self.is_initialized     = false;
         self.collection_address = collection_address;
         self.index              = index;
         self.editor_address     = editor_address;
-        self.individual_content = individual_content;
     }
 
     receive(msg: Transfer) {
@@ -48,7 +45,15 @@ contract NftEggsItem with Deployable {
 
         self.is_initialized = true;
         self.owner = msg.new_owner;
-        self.content = msg.custom_payload;
+
+        let customPayloadString: String = (msg.custom_payload!!).asSlice().asString();
+        let individualContentString: StringBuilder = beginString();
+        individualContentString.append(customPayloadString);
+        individualContentString.append("item_");
+        individualContentString.append(self.index.toString());
+        individualContentString.append(".json");
+
+        self.individual_content = individualContentString.toCell();
 
         send(SendParameters{
             to: msg.response_destination!!,
@@ -104,12 +109,6 @@ contract NftEggsItem with Deployable {
         });
     }
 
-    // The reciever to update base content link
-    receive(msg: UpdateContent) {
-        require(self.editor_address == sender(), "Only editor can change content");
-        self.content = msg.content;
-    }
-
     receive(msg: UpdateIndividualContent) {
         require(self.editor_address == sender(), "Only editor can change individual content");
         self.individual_content = msg.individual_content;
@@ -123,19 +122,12 @@ contract NftEggsItem with Deployable {
 
     // ------------------ Get Function  ------------------ //
     get fun get_nft_data(): NftData {
-        // Preparing the link for nft item data
-        let nftItemDataUrl: StringBuilder = beginString();
-        let contentData: String = (self.content!!).asSlice().asString();
-        let individualContentData: String = (self.individual_content).asSlice().asString();
-        nftItemDataUrl.append(contentData);
-        nftItemDataUrl.append(individualContentData);
-
         return NftData{
             is_initialized: self.is_initialized, 
             index: self.index, 
             collection_address: self.collection_address, 
             owner_address: self.owner!!,
-            individual_content: nftItemDataUrl.toCell()
+            individual_content: self.individual_content!!
         };
     }
 

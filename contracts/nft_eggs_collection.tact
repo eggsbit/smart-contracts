@@ -12,7 +12,7 @@ contract NftEggsCollection with Deployable, Ownable {
     // Id to change contract before new deploy
     id: Int as uint32;
     // Maximum number of NFTs. After that, the player can only buy NFTs on the market from other players.
-    const max_nft_number: Int = 100000;
+    const max_nft_number: Int = 500000;
     // TON coins that we will keep on contract to pay storage fees
     const min_ton_for_storage: Int = ton("0.03");
     // The amount of TON we will pay for the running code in TWM
@@ -34,8 +34,6 @@ contract NftEggsCollection with Deployable, Ownable {
     nft_cost: Int as coins = ton("1");
     // Common collection url link
     collection_content: Cell;
-    // Individual collection url part
-    collection_individual_content: Cell;
     // Royalty collection information
     royalty_params: RoyaltyParams?;
 
@@ -44,14 +42,12 @@ contract NftEggsCollection with Deployable, Ownable {
         owner_address: Address,
         bank_address: Address,
         collection_content: Cell,
-        collection_individual_content: Cell,
         royalty_params: RoyaltyParams
     ) {
         self.id                            = id;
         self.owner                         = owner_address;
         self.bank_address                  = bank_address;
         self.collection_content            = collection_content;
-        self.collection_individual_content = collection_individual_content;
         self.royalty_params                = royalty_params;
     }
 
@@ -78,7 +74,7 @@ contract NftEggsCollection with Deployable, Ownable {
         require(self.next_item_index >= 0, "Non-sequential NFTs");
 
         let ctx: Context = context();
-        let nft_init: StateInit = self._get_nft_item_state_init(self.next_item_index);
+        let nft_init: StateInit = self.get_nft_item_state_init(self.next_item_index);
 
         // Mint a new NFT
         send(SendParameters{
@@ -102,7 +98,7 @@ contract NftEggsCollection with Deployable, Ownable {
         send(SendParameters{
             to: self.bank_address,
             value: self.profit_amount(),
-            mode: SendPayGasSeparately,
+            mode: SendPayGasSeparately + SendIgnoreErrors,
             body: Excesses{ query_id: 0 }.toCell()
         });
 
@@ -170,11 +166,6 @@ contract NftEggsCollection with Deployable, Ownable {
         self.collection_content = msg.content;
     }
 
-    receive(msg: UpdateIndividualContent) {
-        require(self.owner == sender(), "Only owner can change collection individual content");
-        self.collection_individual_content = msg.individual_content;
-    }
-
     receive(msg: NftCostUpdate) {   
         require(self.owner == sender(), "Only owner can set new nft cost");
         self.nft_cost = msg.nft_cost;
@@ -189,27 +180,15 @@ contract NftEggsCollection with Deployable, Ownable {
         require(self.bank_address == sender(), "Only bank can set new bank address");
         self.bank_address = msg.bank_address;
     }
+   
 
-
-    // ------------------ Internal Function  ------------------ //
-    override inline fun _get_nft_item_state_init(index: Int): StateInit {
-        let individual_content: StringBuilder = beginString();
-        individual_content.append("QmSoriupN2M8t3xNuhfYm7AfEYRBcjLNoNaVeJVwab67vA");
-
-        return initOf NftEggsItem(myAddress(), index, self.owner, individual_content.toCell());
-    }
-
-    override inline fun _get_nft_content(index: Int, individual_content: Cell): Cell { 
-        return individual_content;
-    }
-
-    override inline fun _get_collection_data(): CollectionData {
+    // ------------------ Get Function  ------------------ //
+    get fun get_collection_data(): CollectionData {
         // Preparing the link for collection data
         let collectionDataUrl: StringBuilder = beginString();
         let collectionDataString: String = self.collection_content.asSlice().asString();
-        let collectionIndividualDataString: String = self.collection_individual_content.asSlice().asString();
         collectionDataUrl.append(collectionDataString);
-        collectionDataUrl.append(collectionIndividualDataString);
+        collectionDataUrl.append("collection.json");
 
         return CollectionData{
             next_item_index: self.next_item_index,
@@ -218,19 +197,21 @@ contract NftEggsCollection with Deployable, Ownable {
         };
     }
 
-
-    // ------------------ Get Function  ------------------ //
-    get fun get_collection_data(): CollectionData {
-        return self._get_collection_data();
+    get fun get_nft_item_state_init(index: Int): StateInit {
+        return initOf NftEggsItem(myAddress(), index, self.owner);
     }
 
     get fun get_nft_address_by_index(index: Int): Address {
-        let nft_init: StateInit = self._get_nft_item_state_init(index);
+        let nft_init: StateInit = self.get_nft_item_state_init(index);
         return contractAddress(nft_init);
     }
 
     get fun get_nft_content(index: Int, individual_content: Cell): Cell { 
-        return self._get_nft_content(index, individual_content);
+        let b: StringBuilder = beginString();
+        let ic: String = individual_content.asSlice().asString();
+        b.append(ic);
+
+        return b.toCell();
     }
 
     get fun royalty_params(): RoyaltyParams {
